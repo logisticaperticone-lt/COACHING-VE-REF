@@ -1028,20 +1028,28 @@ function normName(s){
   return (s || '').trim().replace(/\s+/g, ' ');
 }
 
-// best-effort date parsing for display only; sorting always uses row order
-function parseDateLabel(raw){
-  if(!raw) return null;
+// best-effort date parsing; returns a sortable timestamp plus a display-ready ISO date
+function parseTimestamp(raw){
+  if(!raw) return { ts: null, iso: null };
   const s = raw.trim();
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+
+  // ISO-like: yyyy-mm-dd[ hh:mm[:ss]]
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if(m){
-    let d = +m[1], mo = +m[2], y = +m[3];
-    if(d > 12 && mo <= 12){ /* d/m/y, keep */ }
-    else if(mo > 12 && d <= 12){ const t = d; d = mo; mo = t; } // swap if only that order valid
-    return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const y=+m[1], mo=+m[2], d=+m[3], hh=+(m[4]||0), mi=+(m[5]||0), se=+(m[6]||0);
+    const dt = new Date(y, mo-1, d, hh, mi, se);
+    return { ts: dt.getTime(), iso: `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}` };
   }
-  return null; // unrecognized — will fall back to raw text
+  // dd/mm/yyyy[ hh:mm[:ss]] (or mm/dd/yyyy if the first heuristic fails)
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m){
+    let d=+m[1], mo=+m[2]; const y=+m[3], hh=+(m[4]||0), mi=+(m[5]||0), se=+(m[6]||0);
+    if(d > 12 && mo <= 12){ /* d/m/y, keep as-is */ }
+    else if(mo > 12 && d <= 12){ const t=d; d=mo; mo=t; } // only the swapped order is valid
+    const dt = new Date(y, mo-1, d, hh, mi, se);
+    return { ts: dt.getTime(), iso: `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}` };
+  }
+  return { ts: null, iso: null }; // unrecognized — sorted last, shown as raw text
 }
 
 function processCSVRows(rows){
@@ -1051,6 +1059,7 @@ function processCSVRows(rows){
   const dataRows = rows.slice(1); // skip header
   const byVendor = {};
   let nOk = 0;
+  let rowOrder = 0;
 
   dataRows.forEach(r => {
     if(r.length < notesIdx + 1) return; // fila incompleta, se ignora
@@ -1081,17 +1090,19 @@ function processCSVRows(rows){
     });
 
     const avgScore = rawScores.reduce((a,b)=>a+b,0) / nQuestions;
-    const isoDate = parseDateLabel(rawDate);
+    const { ts, iso } = parseTimestamp(rawDate);
 
     const coaching = {
       promotor, supervisor,
-      fecha: isoDate,
-      fecha_raw: isoDate ? null : (rawDate || '').split(' ')[0],
+      fecha: iso,
+      fecha_raw: iso ? null : (rawDate || '').split(' ')[0],
       total_pct: Math.round(totalPct * 100) / 100,
       avg_score: Math.round(avgScore * 1000) / 1000,
       grade: gradeFor(avgScore),
       pilares,
       notas,
+      _ts: ts,
+      _rowOrder: rowOrder++,
     };
     (byVendor[promotor] = byVendor[promotor] || []).push(coaching);
     nOk++;
@@ -1101,7 +1112,15 @@ function processCSVRows(rows){
 
   const vendors = [];
   Object.keys(byVendor).sort().forEach(name => {
-    const coachings = byVendor[name]; // ya en orden cronológico (orden del formulario)
+    const coachings = byVendor[name];
+    // ordenar cronológicamente por fecha real; si una fecha no se pudo interpretar,
+    // esa fila se ubica al final conservando el orden en que apareció en el archivo
+    coachings.sort((a, b) => {
+      if(a._ts != null && b._ts != null) return a._ts - b._ts;
+      if(a._ts != null) return -1;
+      if(b._ts != null) return 1;
+      return a._rowOrder - b._rowOrder;
+    });
     coachings.forEach((c,i) => c.numero = i+1);
     const supervisores = [...new Set(coachings.map(c => c.supervisor))].sort();
     vendors.push({
