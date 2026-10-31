@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="es"><head>
+<html lang="es">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seguimiento de Coaching · VE REF</title>
@@ -217,6 +218,11 @@
     .pilar-grid{grid-template-columns:repeat(2,1fr);}
     .main{padding:20px;}
   }
+
+  .live-status{font-size:11.5px; padding:7px 10px; border-radius:8px; line-height:1.35; border:1px solid var(--line); background:var(--bg); color:var(--ink-soft);}
+  .live-status.ok{background:var(--grade-a-soft); color:var(--grade-a); border-color:transparent; font-weight:600;}
+  .live-status.warn{background:var(--grade-c-soft); color:#8A5A12; border-color:transparent;}
+  .live-status.loading{color:var(--ink-faint);}
 </style>
 </head>
 <body>
@@ -236,343 +242,433 @@
       <input type="text" id="searchInput" placeholder="Buscar activador o supervisor…">
     </div>
     <div class="actions-row">
+      <div class="live-status loading" id="liveStatus">Conectando con la planilla…</div>
       <button class="btn btn-primary" id="btnUpdate">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 3v6h-6"></path></svg>
-        Actualizar base
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        Actualizar ahora
+      </button>
+      <button class="btn" id="btnManual">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
+        Cargar CSV manual
       </button>
       <button class="btn" id="btnDownload">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
         Descargar HTML actualizado
       </button>
-      <div class="upload-help">Subí el CSV exportado del formulario de respuestas (Archivo → Descargar → CSV en Google Sheets). Reemplaza toda la base por lo que traiga el archivo.</div>
+      <div class="upload-help">Los datos se leen solos de la planilla cada vez que abrís el dashboard (la fecha de cada coaching sale de la columna A). "Cargar CSV manual" queda como respaldo.</div>
       <input type="file" id="csvFileInput" accept=".csv" class="file-input-hidden">
     </div>
-    <div class="vendor-list" id="vendorList"><div class="sup-group"><div class="sup-group-label">Antual Paula</div><div class="vendor-item active">
-        <span class="badge badge-B">B</span>
-        <span class="name">FIGUEROA JONATHAN<br><span class="meta">3 coachings · <span class="trend down">▼ 15.0 pts</span></span></span>
-      </div><div class="vendor-item">
-        <span class="badge badge-B">B</span>
-        <span class="name">LEON ABRIL CANDELA<br><span class="meta">3 coachings · <span class="trend down">▼ 7.3 pts</span></span></span>
-      </div><div class="vendor-item">
-        <span class="badge badge-B">B</span>
-        <span class="name">RODRIGO D'URSO<br><span class="meta">2 coachings · <span class="trend up">▲ 13.5 pts</span></span></span>
-      </div></div></div>
+    <div class="vendor-list" id="vendorList"></div>
   </aside>
 
   <main class="main" id="main">
-    <div class="empty-state" id="emptyState" style="display: none;">
+    <div class="empty-state" id="emptyState">
       <div class="cap-lg"></div>
       <p>Elegí un activador a la izquierda para ver su evolución en los coachings.</p>
     </div>
-    <div id="detailView" style="display: block;">
-    <div class="head-row">
-      <div class="vendor-title">
-        <h2>FIGUEROA JONATHAN</h2>
-        <div class="sub">Supervisor actual: <b>Antual Paula</b> &nbsp;·&nbsp; 3 coachings registrados</div>
-      </div>
-      <div class="cap-hero">
-        <div class="cap-badge g-B"><div class="cap-inner">B</div></div>
-        <div class="cap-text">Último coaching<span class="pct num">85.0%</span></div>
-      </div>
-    </div>
-
-    <div class="kpi-row">
-      <div class="kpi">
-        <div class="label">Coachings realizados</div>
-        <div class="value num">3</div>
-        <div class="sub">12 de may de 2026 → 19 de ago de 2026</div>
-      </div>
-      <div class="kpi">
-        <div class="label">Puntaje actual</div>
-        <div class="value num">85.0%</div>
-        <div class="sub">Nota B · promedio 3.35/4</div>
-      </div>
-      <div class="kpi">
-        <div class="label">Evolución</div>
-        <div class="value num " style="color:var(--grade-d)">▼ 15.0 pts</div>
-        <div class="sub">vs. primer coaching (-15.0 pts)</div>
-      </div>
-      <div class="kpi">
-        <div class="label">Pilar más débil (último)</div>
-        <div class="value num">75%</div>
-        <div class="sub">Comp. blandas</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Evolución del puntaje</h3>
-      <p class="panel-sub">Total y desglose por pilar en cada coaching. Tocá una etiqueta para mostrar u ocultar esa serie.</p>
-      <div class="chart-wrap"><div id="trendChart"><svg viewBox="0 0 900 300" preserveAspectRatio="xMidYMid meet"><line class="gridline" x1="34" y1="266" x2="886" y2="266"></line><text class="axis-label" x="26" y="269" text-anchor="end">0%</text><line class="gridline" x1="34" y1="215.2" x2="886" y2="215.2"></line><text class="axis-label" x="26" y="218.2" text-anchor="end">20%</text><line class="gridline" x1="34" y1="164.4" x2="886" y2="164.4"></line><text class="axis-label" x="26" y="167.4" text-anchor="end">40%</text><line class="gridline" x1="34" y1="113.6" x2="886" y2="113.6"></line><text class="axis-label" x="26" y="116.6" text-anchor="end">60%</text><line class="gridline" x1="34" y1="62.80000000000001" x2="886" y2="62.80000000000001"></line><text class="axis-label" x="26" y="65.80000000000001" text-anchor="end">80%</text><line class="gridline" x1="34" y1="12" x2="886" y2="12"></line><text class="axis-label" x="26" y="15" text-anchor="end">100%</text><line class="gridline" x1="34" y1="266" x2="886" y2="266" style="stroke:var(--line); stroke-width:1.5;"></line><text class="x-label" x="176" y="290" text-anchor="middle">#1 · 12 de may de 2026</text><g class="series-group" data-key="total" style=""><rect class="series-bar" x="68.08" y="12" width="34.306666666666665" height="254" rx="2" fill="#1B231F"><title>Total — Coaching #1 (12 de may de 2026): 100.0%</title></rect></g><g class="series-group" data-key="blandas" style=""><rect class="series-bar" x="104.38666666666666" y="12" width="34.306666666666665" height="254" rx="2" fill="#2F6F5E"><title>Comp. blandas — Coaching #1 (12 de may de 2026): 100.0%</title></rect></g><g class="series-group" data-key="rutina" style=""><rect class="series-bar" x="140.69333333333333" y="12" width="34.306666666666665" height="254" rx="2" fill="#3E7CA6"><title>Rutina básica — Coaching #1 (12 de may de 2026): 100.0%</title></rect></g><g class="series-group" data-key="oportunidades" style=""><rect class="series-bar" x="177" y="12" width="34.306666666666665" height="254" rx="2" fill="#C98A2B"><title>Oportunidades — Coaching #1 (12 de may de 2026): 100.0%</title></rect></g><g class="series-group" data-key="desarrollo" style=""><rect class="series-bar" x="213.30666666666667" y="12" width="34.306666666666665" height="254" rx="2" fill="#8C5EA8"><title>Desarrollo — Coaching #1 (12 de may de 2026): 100.0%</title></rect></g><g class="series-group" data-key="ejecucion" style=""><rect class="series-bar" x="249.61333333333334" y="12" width="34.306666666666665" height="254" rx="2" fill="#B24A3A"><title>Ejecución — Coaching #1 (12 de may de 2026): 100.0%</title></rect></g><text class="x-label" x="460" y="290" text-anchor="middle">#2 · 20 de jul de 2026</text><g class="series-group" data-key="total" style=""><rect class="series-bar" x="352.08" y="55.815" width="34.306666666666665" height="210.185" rx="2" fill="#1B231F"><title>Total — Coaching #2 (20 de jul de 2026): 82.8%</title></rect></g><g class="series-group" data-key="blandas" style=""><rect class="series-bar" x="388.38666666666666" y="75.5" width="34.306666666666665" height="190.5" rx="2" fill="#2F6F5E"><title>Comp. blandas — Coaching #2 (20 de jul de 2026): 75.0%</title></rect></g><g class="series-group" data-key="rutina" style=""><rect class="series-bar" x="424.6933333333333" y="27.875" width="34.306666666666665" height="238.125" rx="2" fill="#3E7CA6"><title>Rutina básica — Coaching #2 (20 de jul de 2026): 93.8%</title></rect></g><g class="series-group" data-key="oportunidades" style=""><rect class="series-bar" x="461" y="62.80000000000001" width="34.306666666666665" height="203.2" rx="2" fill="#C98A2B"><title>Oportunidades — Coaching #2 (20 de jul de 2026): 80.0%</title></rect></g><g class="series-group" data-key="desarrollo" style=""><rect class="series-bar" x="497.3066666666666" y="75.5" width="34.306666666666665" height="190.5" rx="2" fill="#8C5EA8"><title>Desarrollo — Coaching #2 (20 de jul de 2026): 75.0%</title></rect></g><g class="series-group" data-key="ejecucion" style=""><rect class="series-bar" x="533.6133333333333" y="45.85820000000001" width="34.306666666666665" height="220.1418" rx="2" fill="#B24A3A"><title>Ejecución — Coaching #2 (20 de jul de 2026): 86.7%</title></rect></g><text class="x-label" x="744" y="290" text-anchor="middle">#3 · 19 de ago de 2026</text><g class="series-group" data-key="total" style=""><rect class="series-bar" x="636.08" y="50.099999999999994" width="34.306666666666665" height="215.9" rx="2" fill="#1B231F"><title>Total — Coaching #3 (19 de ago de 2026): 85.0%</title></rect></g><g class="series-group" data-key="blandas" style=""><rect class="series-bar" x="672.3866666666667" y="75.5" width="34.306666666666665" height="190.5" rx="2" fill="#2F6F5E"><title>Comp. blandas — Coaching #3 (19 de ago de 2026): 75.0%</title></rect></g><g class="series-group" data-key="rutina" style=""><rect class="series-bar" x="708.6933333333334" y="27.875" width="34.306666666666665" height="238.125" rx="2" fill="#3E7CA6"><title>Rutina básica — Coaching #3 (19 de ago de 2026): 93.8%</title></rect></g><g class="series-group" data-key="oportunidades" style=""><rect class="series-bar" x="745" y="56.44999999999999" width="34.306666666666665" height="209.55" rx="2" fill="#C98A2B"><title>Oportunidades — Coaching #3 (19 de ago de 2026): 82.5%</title></rect></g><g class="series-group" data-key="desarrollo" style=""><rect class="series-bar" x="781.3066666666667" y="75.5" width="34.306666666666665" height="190.5" rx="2" fill="#8C5EA8"><title>Desarrollo — Coaching #3 (19 de ago de 2026): 75.0%</title></rect></g><g class="series-group" data-key="ejecucion" style=""><rect class="series-bar" x="817.6133333333333" y="28.9418" width="34.306666666666665" height="237.0582" rx="2" fill="#B24A3A"><title>Ejecución — Coaching #3 (19 de ago de 2026): 93.3%</title></rect></g></svg></div></div>
-      <div class="legend-toggle" id="legendToggle">
-    <span class="legend-chip " data-key="total">
-      <span class="dot" style="background:#1B231F"></span>Total
-    </span>
-  
-    <span class="legend-chip " data-key="blandas">
-      <span class="dot" style="background:#2F6F5E"></span>Comp. blandas
-    </span>
-  
-    <span class="legend-chip " data-key="rutina">
-      <span class="dot" style="background:#3E7CA6"></span>Rutina básica
-    </span>
-  
-    <span class="legend-chip " data-key="oportunidades">
-      <span class="dot" style="background:#C98A2B"></span>Oportunidades
-    </span>
-  
-    <span class="legend-chip " data-key="desarrollo">
-      <span class="dot" style="background:#8C5EA8"></span>Desarrollo
-    </span>
-  
-    <span class="legend-chip " data-key="ejecucion">
-      <span class="dot" style="background:#B24A3A"></span>Ejecución
-    </span>
-  </div>
-    </div>
-
-    <div class="panel">
-      <h3>Historial de coachings</h3>
-      <p class="panel-sub">Detalle cronológico, comentarios del supervisor y puntaje por pilar.</p>
-      <table class="hist">
-        <thead>
-          <tr><th>#</th><th>Fecha</th><th>Supervisor</th><th>Total</th><th>Nota</th><th>Puntos a mejorar</th></tr>
-        </thead>
-        <tbody>
-          
-    <tr>
-      <td class="hist-num num">3</td>
-      <td class="num">19 de ago de 2026</td>
-      <td class="sup-tag">Antual Paula</td>
-      <td class="hist-num num">85.0%</td>
-      <td><span class="badge badge-B">B</span></td>
-      <td><div class="notes-cell">Mejoro levemente el proceso de planificación, pero tiene que desarrollar más la incorporación de nuevos lanzamientos.</div>
-    <div class="pilar-grid">
-      
-        <div class="pilar-cell">
-          <div class="pn">Comp. blandas</div>
-          <div class="pv num" style="color:#2F6F5E">75%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Rutina básica</div>
-          <div class="pv num" style="color:#3E7CA6">94%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Oportunidades</div>
-          <div class="pv num" style="color:#C98A2B">83%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Desarrollo</div>
-          <div class="pv num" style="color:#8C5EA8">75%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Ejecución</div>
-          <div class="pv num" style="color:#B24A3A">93%</div>
-        </div>
-      
-    </div>
-    
-      <details class="q-detail">
-        <summary>Competencias blandas — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Planif y ejecución de rutina</span><span class="q-score">3/4</span></li><li><span>Cultura (ambición/perseverancia)</span><span class="q-score">3/4</span></li><li><span>Aprendizaje contínuo</span><span class="q-score">3/4</span></li><li><span>Resiliencia</span><span class="q-score">3/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Rutina básica del activador — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Seguridad</span><span class="q-score">4/4</span></li><li><span>Productividad</span><span class="q-score">4/4</span></li><li><span>Gestión de cartera</span><span class="q-score">3/4</span></li><li><span>Enfoque al cliente</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Detección de oportunidades — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Info del cliente previo a la visita</span><span class="q-score">3/4</span></li><li><span>Redes sociales / whatsapp del PDV</span><span class="q-score">4/4</span></li><li><span>Comenta novedades y lanzamientos</span><span class="q-score">3/4</span></li><li><span>Propuestas de valor</span><span class="q-score">3/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Desarrollo de clientes — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>TBD / distribución de marca</span><span class="q-score">3/4</span></li><li><span>NABs</span><span class="q-score">3/4</span></li><li><span>Marketplace</span><span class="q-score">3/4</span></li><li><span>Compromiso BEES</span><span class="q-score">3/4</span></li><li><span>Look of the leader</span><span class="q-score">3/4</span></li><li><span>Logística</span><span class="q-score">3/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Ejecución — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Gestión de activos</span><span class="q-score">4/4</span></li><li><span>Bees Vision</span><span class="q-score">4/4</span></li><li><span>Imagen (LB / CHOPP)</span><span class="q-score">4/4</span></li><li><span>Disponibilidad de carta</span><span class="q-score">3/4</span></li><li><span>Precio / GAPs / promos</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-  </td>
-    </tr>
-  
-    <tr>
-      <td class="hist-num num">2</td>
-      <td class="num">20 de jul de 2026</td>
-      <td class="sup-tag">Antual Paula</td>
-      <td class="hist-num num">82.8%</td>
-      <td><span class="badge badge-B">B</span></td>
-      <td><div class="notes-cell">tiene que mejorar el proceso de planificación, si bien las canchas es lo que más hace la dispersión, tiene que ir afinando el proximado de pedidos de las canchas grandes.</div>
-    <div class="pilar-grid">
-      
-        <div class="pilar-cell">
-          <div class="pn">Comp. blandas</div>
-          <div class="pv num" style="color:#2F6F5E">75%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Rutina básica</div>
-          <div class="pv num" style="color:#3E7CA6">94%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Oportunidades</div>
-          <div class="pv num" style="color:#C98A2B">80%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Desarrollo</div>
-          <div class="pv num" style="color:#8C5EA8">75%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Ejecución</div>
-          <div class="pv num" style="color:#B24A3A">87%</div>
-        </div>
-      
-    </div>
-    
-      <details class="q-detail">
-        <summary>Competencias blandas — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Planif y ejecución de rutina</span><span class="q-score">2/4</span></li><li><span>Cultura (ambición/perseverancia)</span><span class="q-score">3/4</span></li><li><span>Aprendizaje contínuo</span><span class="q-score">4/4</span></li><li><span>Resiliencia</span><span class="q-score">3/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Rutina básica del activador — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Seguridad</span><span class="q-score">4/4</span></li><li><span>Productividad</span><span class="q-score">4/4</span></li><li><span>Gestión de cartera</span><span class="q-score">3/4</span></li><li><span>Enfoque al cliente</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Detección de oportunidades — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Info del cliente previo a la visita</span><span class="q-score">3/4</span></li><li><span>Redes sociales / whatsapp del PDV</span><span class="q-score">3/4</span></li><li><span>Comenta novedades y lanzamientos</span><span class="q-score">4/4</span></li><li><span>Propuestas de valor</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Desarrollo de clientes — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>TBD / distribución de marca</span><span class="q-score">2/4</span></li><li><span>NABs</span><span class="q-score">3/4</span></li><li><span>Marketplace</span><span class="q-score">3/4</span></li><li><span>Compromiso BEES</span><span class="q-score">3/4</span></li><li><span>Look of the leader</span><span class="q-score">4/4</span></li><li><span>Logística</span><span class="q-score">3/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Ejecución — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Gestión de activos</span><span class="q-score">4/4</span></li><li><span>Bees Vision</span><span class="q-score">4/4</span></li><li><span>Imagen (LB / CHOPP)</span><span class="q-score">4/4</span></li><li><span>Disponibilidad de carta</span><span class="q-score">3/4</span></li><li><span>Precio / GAPs / promos</span><span class="q-score">3/4</span></li>
-        </ul>
-      </details>
-    
-  </td>
-    </tr>
-  
-    <tr>
-      <td class="hist-num num">1</td>
-      <td class="num">12 de may de 2026</td>
-      <td class="sup-tag">Lucas Olea</td>
-      <td class="hist-num num">100.0%</td>
-      <td><span class="badge badge-A">A</span></td>
-      <td><div class="notes-cell">REALIZAR CARTA EN PARRILLA LA UNION- VENDER MICHELOB EN AEROPUERTO</div>
-    <div class="pilar-grid">
-      
-        <div class="pilar-cell">
-          <div class="pn">Comp. blandas</div>
-          <div class="pv num" style="color:#2F6F5E">100%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Rutina básica</div>
-          <div class="pv num" style="color:#3E7CA6">100%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Oportunidades</div>
-          <div class="pv num" style="color:#C98A2B">100%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Desarrollo</div>
-          <div class="pv num" style="color:#8C5EA8">100%</div>
-        </div>
-      
-        <div class="pilar-cell">
-          <div class="pn">Ejecución</div>
-          <div class="pv num" style="color:#B24A3A">100%</div>
-        </div>
-      
-    </div>
-    
-      <details class="q-detail">
-        <summary>Competencias blandas — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Planif y ejecución de rutina</span><span class="q-score">4/4</span></li><li><span>Cultura (ambición/perseverancia)</span><span class="q-score">4/4</span></li><li><span>Aprendizaje contínuo</span><span class="q-score">4/4</span></li><li><span>Resiliencia</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Rutina básica del activador — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Seguridad</span><span class="q-score">4/4</span></li><li><span>Productividad</span><span class="q-score">4/4</span></li><li><span>Gestión de cartera</span><span class="q-score">4/4</span></li><li><span>Enfoque al cliente</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Detección de oportunidades — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Info del cliente previo a la visita</span><span class="q-score">4/4</span></li><li><span>Redes sociales / whatsapp del PDV</span><span class="q-score">4/4</span></li><li><span>Comenta novedades y lanzamientos</span><span class="q-score">4/4</span></li><li><span>Propuestas de valor</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Desarrollo de clientes — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>TBD / distribución de marca</span><span class="q-score">4/4</span></li><li><span>NABs</span><span class="q-score">4/4</span></li><li><span>Marketplace</span><span class="q-score">4/4</span></li><li><span>Compromiso BEES</span><span class="q-score">4/4</span></li><li><span>Look of the leader</span><span class="q-score">4/4</span></li><li><span>Logística</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-      <details class="q-detail">
-        <summary>Ejecución — detalle de preguntas</summary>
-        <ul class="q-list">
-          <li><span>Gestión de activos</span><span class="q-score">4/4</span></li><li><span>Bees Vision</span><span class="q-score">4/4</span></li><li><span>Imagen (LB / CHOPP)</span><span class="q-score">4/4</span></li><li><span>Disponibilidad de carta</span><span class="q-score">4/4</span></li><li><span>Precio / GAPs / promos</span><span class="q-score">4/4</span></li>
-        </ul>
-      </details>
-    
-  </td>
-    </tr>
-  
-        </tbody>
-      </table>
-    </div>
-
-    <footer class="foot">Generado a partir de las respuestas del formulario de coaching · 3 registro(s) para FIGUEROA JONATHAN</footer>
-  </div>
+    <div id="detailView" style="display:none;"></div>
   </main>
 </div>
 
-<div class="toast" id="toast">Base actualizada: 8 coachings · 3 activadores</div>
+<div class="toast" id="toast"></div>
 
-<script id="coaching-data" type="application/json">{"pilares_meta":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas"},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica"},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades"},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo"},{"id":"ejecucion","name":"Ejecución","short":"Ejecución"}],"vendors":[{"nombre":"FIGUEROA JONATHAN","supervisores":["Antual Paula","Lucas Olea"],"supervisor_actual":"Antual Paula","n_coachings":3,"ultimo_total":85,"ultima_nota":"B","primer_total":100,"coachings":[{"promotor":"FIGUEROA JONATHAN","supervisor":"Lucas Olea","fecha":"2026-05-12","fecha_raw":null,"total_pct":100,"avg_score":4,"grade":"A","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":100,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":4},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":4},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":4}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":100,"questions":[{"label":"Seguridad","weight":5,"score":4},{"label":"Productividad","weight":5,"score":4},{"label":"Gestión de cartera","weight":5,"score":4},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":100,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":4},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":4},{"label":"Comenta novedades y lanzamientos","weight":1,"score":4},{"label":"Propuestas de valor","weight":1,"score":4}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":100,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":4},{"label":"NABs","weight":3,"score":4},{"label":"Marketplace","weight":3,"score":4},{"label":"Compromiso BEES","weight":3,"score":4},{"label":"Look of the leader","weight":4,"score":4},{"label":"Logística","weight":3,"score":4}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":100,"questions":[{"label":"Gestión de activos","weight":3,"score":4},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":4},{"label":"Disponibilidad de carta","weight":8,"score":4},{"label":"Precio / GAPs / promos","weight":8,"score":4}]}],"notas":"REALIZAR CARTA EN PARRILLA LA UNION- VENDER MICHELOB EN AEROPUERTO","_ts":1778615540000,"_rowOrder":0,"numero":1},{"promotor":"FIGUEROA JONATHAN","supervisor":"Antual Paula","fecha":"2026-07-20","fecha_raw":null,"total_pct":82.75,"avg_score":3.348,"grade":"B","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":75,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":2},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":3},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":3}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":93.75,"questions":[{"label":"Seguridad","weight":5,"score":4},{"label":"Productividad","weight":5,"score":4},{"label":"Gestión de cartera","weight":5,"score":3},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":80,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":3},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":3},{"label":"Comenta novedades y lanzamientos","weight":1,"score":4},{"label":"Propuestas de valor","weight":1,"score":4}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":75,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":2},{"label":"NABs","weight":3,"score":3},{"label":"Marketplace","weight":3,"score":3},{"label":"Compromiso BEES","weight":3,"score":3},{"label":"Look of the leader","weight":4,"score":4},{"label":"Logística","weight":3,"score":3}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":86.67,"questions":[{"label":"Gestión de activos","weight":3,"score":4},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":4},{"label":"Disponibilidad de carta","weight":8,"score":3},{"label":"Precio / GAPs / promos","weight":8,"score":3}]}],"notas":"tiene que mejorar el proceso de planificación, si bien las canchas es lo que más hace la dispersión, tiene que ir afinando el proximado de pedidos de las canchas grandes.","_ts":1784557384000,"_rowOrder":3,"numero":2},{"promotor":"FIGUEROA JONATHAN","supervisor":"Antual Paula","fecha":"2026-08-19","fecha_raw":null,"total_pct":85,"avg_score":3.348,"grade":"B","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":75,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":3},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":3},{"label":"Aprendizaje contínuo","weight":5,"score":3},{"label":"Resiliencia","weight":5,"score":3}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":93.75,"questions":[{"label":"Seguridad","weight":5,"score":4},{"label":"Productividad","weight":5,"score":4},{"label":"Gestión de cartera","weight":5,"score":3},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":82.5,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":3},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":4},{"label":"Comenta novedades y lanzamientos","weight":1,"score":3},{"label":"Propuestas de valor","weight":1,"score":3}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":75,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":3},{"label":"NABs","weight":3,"score":3},{"label":"Marketplace","weight":3,"score":3},{"label":"Compromiso BEES","weight":3,"score":3},{"label":"Look of the leader","weight":4,"score":3},{"label":"Logística","weight":3,"score":3}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":93.33,"questions":[{"label":"Gestión de activos","weight":3,"score":4},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":4},{"label":"Disponibilidad de carta","weight":8,"score":3},{"label":"Precio / GAPs / promos","weight":8,"score":4}]}],"notas":"Mejoro levemente el proceso de planificación, pero tiene que desarrollar más la incorporación de nuevos lanzamientos.","_ts":1787150410000,"_rowOrder":4,"numero":3}]},{"nombre":"LEON ABRIL CANDELA","supervisores":["Antual Paula","Lucas Olea"],"supervisor_actual":"Antual Paula","n_coachings":3,"ultimo_total":83.75,"ultima_nota":"B","primer_total":91,"coachings":[{"promotor":"LEON ABRIL CANDELA","supervisor":"Lucas Olea","fecha":"2026-05-27","fecha_raw":null,"total_pct":91,"avg_score":3.565,"grade":"A","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":93.75,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":3},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":4},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":4}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":93.75,"questions":[{"label":"Seguridad","weight":5,"score":4},{"label":"Productividad","weight":5,"score":4},{"label":"Gestión de cartera","weight":5,"score":3},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":85,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":3},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":4},{"label":"Comenta novedades y lanzamientos","weight":1,"score":4},{"label":"Propuestas de valor","weight":1,"score":3}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":78.75,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":3},{"label":"NABs","weight":3,"score":4},{"label":"Marketplace","weight":3,"score":4},{"label":"Compromiso BEES","weight":3,"score":3},{"label":"Look of the leader","weight":4,"score":3},{"label":"Logística","weight":3,"score":2}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":97.5,"questions":[{"label":"Gestión de activos","weight":3,"score":3},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":4},{"label":"Disponibilidad de carta","weight":8,"score":4},{"label":"Precio / GAPs / promos","weight":8,"score":4}]}],"notas":"desarrollar más TDB y gestión de redes sociales","_ts":1779890885000,"_rowOrder":2,"numero":1},{"promotor":"LEON ABRIL CANDELA","supervisor":"Lucas Olea","fecha":"2026-06-05","fecha_raw":null,"total_pct":92.25,"avg_score":3.739,"grade":"A","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":100,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":4},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":4},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":4}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":100,"questions":[{"label":"Seguridad","weight":5,"score":4},{"label":"Productividad","weight":5,"score":4},{"label":"Gestión de cartera","weight":5,"score":4},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":82.5,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":4},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":2},{"label":"Comenta novedades y lanzamientos","weight":1,"score":3},{"label":"Propuestas de valor","weight":1,"score":4}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":100,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":4},{"label":"NABs","weight":3,"score":4},{"label":"Marketplace","weight":3,"score":4},{"label":"Compromiso BEES","weight":3,"score":4},{"label":"Look of the leader","weight":4,"score":4},{"label":"Logística","weight":3,"score":4}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":80,"questions":[{"label":"Gestión de activos","weight":3,"score":4},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":3},{"label":"Disponibilidad de carta","weight":8,"score":3},{"label":"Precio / GAPs / promos","weight":8,"score":3}]}],"notas":"Prestar mas atencion a redes y cartas de los clientes","_ts":1780665917000,"_rowOrder":1,"numero":2},{"promotor":"LEON ABRIL CANDELA","supervisor":"Antual Paula","fecha":"2026-08-06","fecha_raw":null,"total_pct":83.75,"avg_score":3.348,"grade":"B","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":93.75,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":4},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":3},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":4}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":75,"questions":[{"label":"Seguridad","weight":5,"score":3},{"label":"Productividad","weight":5,"score":3},{"label":"Gestión de cartera","weight":5,"score":2},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":82.5,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":3},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":4},{"label":"Comenta novedades y lanzamientos","weight":1,"score":3},{"label":"Propuestas de valor","weight":1,"score":3}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":82.5,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":2},{"label":"NABs","weight":3,"score":4},{"label":"Marketplace","weight":3,"score":4},{"label":"Compromiso BEES","weight":3,"score":3},{"label":"Look of the leader","weight":4,"score":4},{"label":"Logística","weight":3,"score":3}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":84.17,"questions":[{"label":"Gestión de activos","weight":3,"score":3},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":4},{"label":"Disponibilidad de carta","weight":8,"score":3},{"label":"Precio / GAPs / promos","weight":8,"score":3}]}],"notas":"Tiene que seguir trabajando la incoporacipon de nuevos skus en los principales clientes.","_ts":1786030634000,"_rowOrder":7,"numero":3}]},{"nombre":"RODRIGO D'URSO","supervisores":["Antual Paula"],"supervisor_actual":"Antual Paula","n_coachings":2,"ultimo_total":87.25,"ultima_nota":"B","primer_total":73.75,"coachings":[{"promotor":"RODRIGO D'URSO","supervisor":"Antual Paula","fecha":"2026-07-10","fecha_raw":null,"total_pct":73.75,"avg_score":2.957,"grade":"B","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":93.75,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":4},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":4},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":3}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":75,"questions":[{"label":"Seguridad","weight":5,"score":3},{"label":"Productividad","weight":5,"score":3},{"label":"Gestión de cartera","weight":5,"score":2},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":55,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":2},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":2},{"label":"Comenta novedades y lanzamientos","weight":1,"score":3},{"label":"Propuestas de valor","weight":1,"score":3}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":70,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":3},{"label":"NABs","weight":3,"score":3},{"label":"Marketplace","weight":3,"score":3},{"label":"Compromiso BEES","weight":3,"score":3},{"label":"Look of the leader","weight":4,"score":2},{"label":"Logística","weight":3,"score":3}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":68.33,"questions":[{"label":"Gestión de activos","weight":3,"score":3},{"label":"Bees Vision","weight":3,"score":3},{"label":"Imagen (LB / CHOPP)","weight":8,"score":3},{"label":"Disponibilidad de carta","weight":8,"score":3},{"label":"Precio / GAPs / promos","weight":8,"score":2}]}],"notas":"Esta en proceso de conocer a los clientes, esta trabajando en precio, redes y tdb, pero todavia falta el mayor desarrollo en la zona.","_ts":1783694899000,"_rowOrder":5,"numero":1},{"promotor":"RODRIGO D'URSO","supervisor":"Antual Paula","fecha":"2026-08-13","fecha_raw":null,"total_pct":87.25,"avg_score":3.478,"grade":"B","pilares":[{"id":"blandas","name":"Competencias blandas","short":"Comp. blandas","pct":100,"questions":[{"label":"Planif y ejecución de rutina","weight":5,"score":4},{"label":"Cultura (ambición/perseverancia)","weight":5,"score":4},{"label":"Aprendizaje contínuo","weight":5,"score":4},{"label":"Resiliencia","weight":5,"score":4}]},{"id":"rutina","name":"Rutina básica del activador","short":"Rutina básica","pct":100,"questions":[{"label":"Seguridad","weight":5,"score":4},{"label":"Productividad","weight":5,"score":4},{"label":"Gestión de cartera","weight":5,"score":4},{"label":"Enfoque al cliente","weight":5,"score":4}]},{"id":"oportunidades","name":"Detección de oportunidades","short":"Oportunidades","pct":75,"questions":[{"label":"Info del cliente previo a la visita","weight":5,"score":3},{"label":"Redes sociales / whatsapp del PDV","weight":3,"score":3},{"label":"Comenta novedades y lanzamientos","weight":1,"score":3},{"label":"Propuestas de valor","weight":1,"score":3}]},{"id":"desarrollo","name":"Desarrollo de clientes","short":"Desarrollo","pct":78.75,"questions":[{"label":"TBD / distribución de marca","weight":4,"score":3},{"label":"NABs","weight":3,"score":4},{"label":"Marketplace","weight":3,"score":3},{"label":"Compromiso BEES","weight":3,"score":3},{"label":"Look of the leader","weight":4,"score":3},{"label":"Logística","weight":3,"score":3}]},{"id":"ejecucion","name":"Ejecución","short":"Ejecución","pct":80,"questions":[{"label":"Gestión de activos","weight":3,"score":4},{"label":"Bees Vision","weight":3,"score":4},{"label":"Imagen (LB / CHOPP)","weight":8,"score":3},{"label":"Disponibilidad de carta","weight":8,"score":3},{"label":"Precio / GAPs / promos","weight":8,"score":3}]}],"notas":"Ya esta más afianzado en la zona, trabajando extender el mix de productos. Seguir trabajando el armado de cartas y revisión de edf, chopperas.","_ts":1786634148000,"_rowOrder":6,"numero":2}]}],"generated_from":"CSV importado manualmente","n_registros":8}</script>
+<script id="coaching-data" type="application/json">{
+ "pilares_meta": [
+  {
+   "id": "blandas",
+   "name": "Competencias blandas",
+   "short": "Comp. blandas"
+  },
+  {
+   "id": "rutina",
+   "name": "Rutina básica del activador",
+   "short": "Rutina básica"
+  },
+  {
+   "id": "oportunidades",
+   "name": "Detección de oportunidades",
+   "short": "Oportunidades"
+  },
+  {
+   "id": "desarrollo",
+   "name": "Desarrollo de clientes",
+   "short": "Desarrollo"
+  },
+  {
+   "id": "ejecucion",
+   "name": "Ejecución",
+   "short": "Ejecución"
+  }
+ ],
+ "vendors": [
+  {
+   "nombre": "FIGUEROA JONATHAN",
+   "supervisores": [
+    "Lucas Olea"
+   ],
+   "supervisor_actual": "Lucas Olea",
+   "n_coachings": 1,
+   "ultimo_total": 100.0,
+   "ultima_nota": "A",
+   "primer_total": 100.0,
+   "coachings": [
+    {
+     "promotor": "FIGUEROA JONATHAN",
+     "supervisor": "Lucas Olea",
+     "fecha": "2026-05-12",
+     "fecha_ts": "2026-05-12T16:52:19.598000",
+     "total_pct": 100.0,
+     "avg_score": 4.0,
+     "grade": "A",
+     "pilares": [
+      {
+       "id": "blandas",
+       "name": "Competencias blandas",
+       "short": "Comp. blandas",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "Planif y ejecución de rutina",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Cultura (ambición/perseverancia)",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Aprendizaje contínuo",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Resiliencia",
+         "weight": 5,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "rutina",
+       "name": "Rutina básica del activador",
+       "short": "Rutina básica",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "Seguridad",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Productividad",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Gestión de cartera",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Enfoque al cliente",
+         "weight": 5,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "oportunidades",
+       "name": "Detección de oportunidades",
+       "short": "Oportunidades",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "Info del cliente previo a la visita",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Redes sociales / whatsapp del PDV",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Comenta novedades y lanzamientos",
+         "weight": 1,
+         "score": 4.0
+        },
+        {
+         "label": "Propuestas de valor",
+         "weight": 1,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "desarrollo",
+       "name": "Desarrollo de clientes",
+       "short": "Desarrollo",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "TBD / distribución de marca",
+         "weight": 4,
+         "score": 4.0
+        },
+        {
+         "label": "NABs",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Marketplace",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Compromiso BEES",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Look of the leader",
+         "weight": 4,
+         "score": 4.0
+        },
+        {
+         "label": "Logística",
+         "weight": 3,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "ejecucion",
+       "name": "Ejecución",
+       "short": "Ejecución",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "Gestión de activos",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Bees Vision",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Imagen (LB / CHOPP)",
+         "weight": 8,
+         "score": 4.0
+        },
+        {
+         "label": "Disponibilidad de carta",
+         "weight": 8,
+         "score": 4.0
+        },
+        {
+         "label": "Precio / GAPs / promos",
+         "weight": 8,
+         "score": 4.0
+        }
+       ]
+      }
+     ],
+     "notas": "REALIZAR CARTA EN PARRILLA LA UNION- VENDER MICHELOB EN AEROPUERTO",
+     "numero": 1,
+     "vendor_supervisor_latest": "Lucas Olea"
+    }
+   ]
+  },
+  {
+   "nombre": "LEON ABRIL CANDELA",
+   "supervisores": [
+    "Lucas Olea"
+   ],
+   "supervisor_actual": "Lucas Olea",
+   "n_coachings": 1,
+   "ultimo_total": 92.25,
+   "ultima_nota": "A",
+   "primer_total": 92.25,
+   "coachings": [
+    {
+     "promotor": "LEON ABRIL CANDELA",
+     "supervisor": "Lucas Olea",
+     "fecha": "2026-06-05",
+     "fecha_ts": "2026-06-05T10:25:16.628000",
+     "total_pct": 92.25,
+     "avg_score": 3.739,
+     "grade": "A",
+     "pilares": [
+      {
+       "id": "blandas",
+       "name": "Competencias blandas",
+       "short": "Comp. blandas",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "Planif y ejecución de rutina",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Cultura (ambición/perseverancia)",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Aprendizaje contínuo",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Resiliencia",
+         "weight": 5,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "rutina",
+       "name": "Rutina básica del activador",
+       "short": "Rutina básica",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "Seguridad",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Productividad",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Gestión de cartera",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Enfoque al cliente",
+         "weight": 5,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "oportunidades",
+       "name": "Detección de oportunidades",
+       "short": "Oportunidades",
+       "pct": 82.5,
+       "questions": [
+        {
+         "label": "Info del cliente previo a la visita",
+         "weight": 5,
+         "score": 4.0
+        },
+        {
+         "label": "Redes sociales / whatsapp del PDV",
+         "weight": 3,
+         "score": 2.0
+        },
+        {
+         "label": "Comenta novedades y lanzamientos",
+         "weight": 1,
+         "score": 3.0
+        },
+        {
+         "label": "Propuestas de valor",
+         "weight": 1,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "desarrollo",
+       "name": "Desarrollo de clientes",
+       "short": "Desarrollo",
+       "pct": 100.0,
+       "questions": [
+        {
+         "label": "TBD / distribución de marca",
+         "weight": 4,
+         "score": 4.0
+        },
+        {
+         "label": "NABs",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Marketplace",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Compromiso BEES",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Look of the leader",
+         "weight": 4,
+         "score": 4.0
+        },
+        {
+         "label": "Logística",
+         "weight": 3,
+         "score": 4.0
+        }
+       ]
+      },
+      {
+       "id": "ejecucion",
+       "name": "Ejecución",
+       "short": "Ejecución",
+       "pct": 80.0,
+       "questions": [
+        {
+         "label": "Gestión de activos",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Bees Vision",
+         "weight": 3,
+         "score": 4.0
+        },
+        {
+         "label": "Imagen (LB / CHOPP)",
+         "weight": 8,
+         "score": 3.0
+        },
+        {
+         "label": "Disponibilidad de carta",
+         "weight": 8,
+         "score": 3.0
+        },
+        {
+         "label": "Precio / GAPs / promos",
+         "weight": 8,
+         "score": 3.0
+        }
+       ]
+      }
+     ],
+     "notas": "Prestar mas atencion a redes y cartas de los clientes",
+     "numero": 1,
+     "vendor_supervisor_latest": "Lucas Olea"
+    }
+   ]
+  }
+ ],
+ "generated_from": "Respuestas_-_Coaching_Promotor_de_Ventas_-_2026__respuestas_.xlsx",
+ "n_registros": 2
+}</script>
 
 <script>
 const DATA = JSON.parse(document.getElementById('coaching-data').textContent);
@@ -1067,9 +1163,82 @@ function showToast(msg, isError){
   showToast._timer = setTimeout(() => { t.className = 'toast'; }, 4200);
 }
 
-document.getElementById('btnUpdate').addEventListener('click', () => {
+/* ============================================================
+   CARGA AUTOMÁTICA desde Google Sheets (CSV publicado en la web)
+   Si falla o la planilla no coincide, se siguen mostrando los
+   datos guardados dentro de este archivo.
+   ============================================================ */
+const LIVE_CONFIG = {
+  url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTh1qoyeChAQTkePVliKF2HjAxs6GQDi7mZdUFd-O4l2DrsIwyEg4_gywsjftrbOTnJVIV9N1jcQJp/pub?output=csv',
+  headerCounts: [27, 28],       // cantidad de columnas con encabezado que se espera
+  firstQuestionHint: /organizado/i,   // texto que debe aparecer en el encabezado de la 1ª pregunta
+};
+
+function setLiveStatus(kind, text){
+  const el = document.getElementById('liveStatus');
+  if(!el) return;
+  el.className = 'live-status ' + kind;
+  el.textContent = text;
+}
+
+function validateLiveRows(rows){
+  if(!rows.length) throw new Error('la planilla llegó vacía');
+  const header = rows[0];
+  const nonEmpty = header.filter(h => (h || '').trim() !== '').length;
+  if(!LIVE_CONFIG.headerCounts.includes(nonEmpty) || !LIVE_CONFIG.firstQuestionHint.test(header[3] || '')){
+    throw new Error('la planilla no coincide con este dashboard (' + nonEmpty + ' columnas)');
+  }
+}
+
+function applyLiveData(newData){
+  const prev = selectedVendor;
+  DATA.pilares_meta = newData.pilares_meta;
+  DATA.vendors = newData.vendors;
+  DATA.generated_from = 'Google Sheets (en vivo)';
+  DATA.n_registros = newData.n_registros;
+  try{ document.getElementById('coaching-data').textContent = JSON.stringify(DATA); }catch(e){}
+  if(prev && DATA.vendors.find(v => v.nombre === prev)){
+    selectVendor(prev);
+  } else {
+    selectedVendor = null;
+    document.getElementById('emptyState').style.display = '';
+    document.getElementById('detailView').style.display = 'none';
+    renderSidebar(document.getElementById('searchInput').value);
+  }
+}
+
+let liveBusy = false;
+async function loadLive(manual){
+  if(liveBusy) return;
+  liveBusy = true;
+  setLiveStatus('loading', 'Actualizando desde la planilla…');
+  try{
+    const sep = LIVE_CONFIG.url.includes('?') ? '&' : '?';
+    const res = await fetch(LIVE_CONFIG.url + sep + 't=' + Date.now(), {cache: 'no-store'});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if(/^\s*<(!doctype|html)/i.test(text)) throw new Error('la hoja no está publicada como CSV');
+    const rows = parseCSV(text);
+    validateLiveRows(rows);
+    const newData = processCSVRows(rows);
+    applyLiveData(newData);
+    const hh = new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+    setLiveStatus('ok', 'En vivo · ' + newData.n_registros + ' coachings · ' + hh);
+    if(manual) showToast('Base actualizada: ' + newData.n_registros + ' coachings');
+  } catch(err){
+    setLiveStatus('warn', 'Sin datos en vivo (' + err.message + '). Mostrando los datos guardados.');
+    if(manual) showToast('No se pudo actualizar: ' + err.message, true);
+  } finally {
+    liveBusy = false;
+  }
+}
+
+document.getElementById('btnUpdate').addEventListener('click', () => loadLive(true));
+document.getElementById('btnManual').addEventListener('click', () => {
   document.getElementById('csvFileInput').click();
 });
+loadLive(false);
+
 
 document.getElementById('csvFileInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -1123,6 +1292,5 @@ document.getElementById('btnDownload').addEventListener('click', () => {
 });
 
 </script>
-
-
-</body></html>
+</body>
+</html>
